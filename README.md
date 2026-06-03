@@ -2,7 +2,7 @@
 
 上证市场事件雷达 / 短线预警助手。
 
-当前阶段：**MVP 数据采集层**。
+当前阶段：**MVP 数据采集层 + 通知模块基础版**。
 
 本项目用于监测上证市场相关的：
 
@@ -10,6 +10,7 @@
 - 公司公告
 - 政策 / 新闻事件
 - 个股 / 板块异动
+- 事件预警推送
 
 系统只做事件监测、风险提示、观察池生成，不做自动下单，也不提供确定性买卖建议。
 
@@ -19,7 +20,7 @@
 
 SSE Event Radar is a local-first A-share event monitoring project focused on the Shanghai Stock Exchange market.
 
-The first-stage goal is to build a stable data collector based on AKShare, then gradually add:
+The first-stage goal is to build a stable data collector based on AKShare / Eastmoney-compatible public data sources, then gradually add:
 
 - announcement classification
 - event extraction
@@ -43,13 +44,16 @@ The system is designed as a decision-support tool, not an automated trading bot.
 - SQLAlchemy
 - APScheduler
 - Loguru
+- Requests
+- Server 酱 Turbo notification
 
 Later stages may add:
 
 - Redis
 - PostgreSQL
 - React / Vite dashboard
-- Telegram / WeChat notification
+- Telegram notification
+- PushPlus / WxPusher notification
 - local LLM via Ollama / vLLM
 - OpenAI-compatible API for event reasoning
 
@@ -71,10 +75,16 @@ sse-event-radar/
 ├── docs/
 ├── logs/
 ├── scripts/
-│   └── smoke_test_akshare.py
+│   ├── smoke_test_akshare.py
+│   └── test_serverchan.py
 ├── src/
 │   └── sse_event_radar/
 │       ├── __init__.py
+│       ├── alerts/
+│       │   ├── __init__.py
+│       │   ├── models.py
+│       │   ├── renderers.py
+│       │   └── service.py
 │       ├── api/
 │       │   ├── __init__.py
 │       │   └── app.py
@@ -90,7 +100,11 @@ sse-event-radar/
 │       │   ├── models.py
 │       │   └── session.py
 │       ├── logging.py
+│       ├── network.py
 │       ├── notifiers/
+│       │   ├── __init__.py
+│       │   ├── base.py
+│       │   └── serverchan.py
 │       ├── processors/
 │       └── services/
 └── tests/
@@ -123,9 +137,54 @@ cp .env.example .env
 
 ---
 
-## 5. Smoke Test
+## 5. Environment Configuration
 
-Run AKShare collector smoke test:
+Edit `.env`.
+
+Example without proxy:
+
+```env
+APP_NAME=sse-event-radar
+APP_ENV=dev
+LOG_LEVEL=INFO
+
+DATA_DIR=./data
+DATABASE_URL=sqlite:///./data/db/sse_event_radar.sqlite3
+
+QUOTE_POLL_SECONDS=60
+ANNOUNCEMENT_POLL_MINUTES=5
+STOCK_MASTER_REFRESH_HOUR=17
+
+AKSHARE_RATE_LIMIT_SECONDS=3
+
+PROXY_ENABLED=false
+PROXY_URL=
+NO_PROXY=localhost,127.0.0.1,::1
+
+ENABLE_SERVERCHAN=false
+SERVERCHAN_SENDKEY=
+
+ENABLE_LLM=false
+OPENAI_API_KEY=
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+```
+
+Example with proxy:
+
+```env
+PROXY_ENABLED=true
+PROXY_URL=http://your-proxy-host:your-proxy-port
+NO_PROXY=localhost,127.0.0.1,::1
+```
+
+When `PROXY_ENABLED=false`, the project should not use a proxy.  
+When `PROXY_ENABLED=true`, collectors and notifiers will use `PROXY_URL`.
+
+---
+
+## 6. Smoke Test
+
+Run collector smoke test:
 
 ```bash
 python scripts/smoke_test_akshare.py
@@ -147,7 +206,7 @@ data/raw/announcements_sample.csv
 
 ---
 
-## 6. Run API
+## 7. Run API
 
 Start FastAPI development server:
 
@@ -184,20 +243,20 @@ http://127.0.0.1:8000/docs
 
 ---
 
-## 7. Current Collectors
+## 8. Current Collectors
 
 ### StockMasterCollector
 
-Source:
+Current source:
 
 ```text
-AKShare stock_info_a_code_name
+Eastmoney push2 SSE quote endpoint
 ```
 
 Purpose:
 
-- collect A-share stock code and name
-- filter Shanghai-listed stocks
+- collect Shanghai-listed stock code and name
+- avoid unrelated BSE data requests
 - classify main board and STAR Market by code prefix
 
 Current SSE prefixes:
@@ -210,22 +269,23 @@ Current SSE prefixes:
 
 ### SSEQuoteCollector
 
-Source:
+Current source:
 
 ```text
-AKShare stock_sh_a_spot_em
+Eastmoney push2 SSE quote endpoint
 ```
 
 Purpose:
 
-- collect Shanghai A-share real-time quote snapshot
-- normalize fields such as price, percentage change, volume, amount, turnover, speed, 5-minute change
+- collect Shanghai A-share quote snapshot
+- normalize fields such as price, percentage change, volume, amount, turnover and speed
+- support smaller page size and `max_pages` for smoke tests
 
 ---
 
 ### AnnouncementCollector
 
-Source:
+Current source:
 
 ```text
 AKShare stock_notice_report
@@ -239,7 +299,59 @@ Purpose:
 
 ---
 
-## 8. Development Commands
+## 9. Notification: Server 酱 Turbo
+
+First version uses Server 酱 Turbo for personal WeChat notification.
+
+### 9.1 Configure Server 酱
+
+Set the following variables in `.env`:
+
+```env
+ENABLE_SERVERCHAN=true
+SERVERCHAN_SENDKEY=your_sendkey_here
+```
+
+`SERVERCHAN_SENDKEY` is your personal Server 酱 SendKey.  
+Do not commit `.env`.
+
+### 9.2 Test Server 酱
+
+Run:
+
+```bash
+python scripts/test_serverchan.py
+```
+
+If configured correctly, your bound WeChat account should receive a test notification.
+
+### 9.3 Current notification flow
+
+```text
+Alert
+  ↓
+render_alert_markdown()
+  ↓
+AlertService
+  ↓
+ServerChanNotifier
+  ↓
+Server 酱 API
+  ↓
+personal WeChat notification
+```
+
+### 9.4 Important note
+
+Server 酱 first version sends messages to the WeChat account bound to the SendKey.
+
+It does not directly send messages to arbitrary WeChat friends.
+
+For multi-user delivery, each user should have their own channel binding, or the project should later implement a user-channel mapping system.
+
+---
+
+## 10. Development Commands
 
 Install dependencies:
 
@@ -271,7 +383,7 @@ Format code:
 make format
 ```
 
-Run AKShare smoke test:
+Run collector smoke test:
 
 ```bash
 make smoke
@@ -285,7 +397,7 @@ make api
 
 ---
 
-## 9. Roadmap
+## 11. Roadmap
 
 ### Phase 1: Data Collector
 
@@ -301,21 +413,24 @@ make api
 - [ ] Add raw data persistence
 - [ ] Add deduplication
 
-### Phase 2: Event Processing
+### Phase 2: Alert and Notification
+
+- [x] Add Alert model
+- [x] Add Markdown alert renderer
+- [x] Add AlertService
+- [x] Add ServerChanNotifier
+- [x] Add Server 酱 test script
+- [ ] Add alert history table
+- [ ] Add alert deduplication
+- [ ] Add notification rate limit
+
+### Phase 3: Event Processing
 
 - [ ] Announcement keyword classification
 - [ ] Positive / negative / neutral event tags
 - [ ] Risk keyword detection
 - [ ] Stock-event mapping
 - [ ] Market confirmation using quote data
-
-### Phase 3: Alert System
-
-- [ ] Alert score
-- [ ] A / B / C alert levels
-- [ ] Watchlist generation
-- [ ] Telegram notification
-- [ ] WeChat / email notification
 
 ### Phase 4: LLM Integration
 
@@ -335,7 +450,7 @@ make api
 
 ---
 
-## 10. Safety Notes
+## 12. Safety Notes
 
 This project is for research and decision support only.
 
@@ -365,6 +480,6 @@ manual decision
 
 ---
 
-## 11. License
+## 13. License
 
 To be decided.
