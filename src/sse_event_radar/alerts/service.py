@@ -5,6 +5,7 @@ from sse_event_radar.alerts.renderers import render_alert_markdown, render_alert
 from sse_event_radar.config import settings
 from sse_event_radar.notifiers.base import BaseNotifier
 from sse_event_radar.notifiers.serverchan import ServerChanNotifier
+from sse_event_radar.notifiers.feishu_bot import FeishuBotNotifier
 
 
 class AlertService:
@@ -20,6 +21,9 @@ class AlertService:
         if settings.enable_serverchan:
             notifiers.append(ServerChanNotifier())
 
+        if settings.enable_feishu_bot:
+            notifiers.append(FeishuBotNotifier())
+            
         return notifiers
 
     def send_alert(self, alert: Alert) -> bool:

@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     enable_serverchan: bool = False
     serverchan_sendkey: str | None = None
 
+    enable_feishu_bot: bool = False
+    feishu_bot_webhook: str | None = None
+    feishu_bot_secret: str | None = None
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

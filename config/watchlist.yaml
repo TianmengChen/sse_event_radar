@@ -1,0 +1,20 @@
+stocks:
+  - code: "600000"
+    name: "浦发银行"
+    note: "测试用"
+
+  - code: "512480"
+    name: "半导体ETF国联安"
+    type: "etf"
+    note: "半导体ETF"
+
+  - code: "600036"
+    name: "招商银行"
+    note: "银行龙头"
+
+settings:
+  min_pct_chg: 0.5
+  max_pct_chg_main: 6.0
+  max_pct_chg_star: 12.0
+  max_pct_chg_etf: 5.0
+  min_amount: 100000000

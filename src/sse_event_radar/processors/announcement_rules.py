@@ -1,4 +1,3 @@
-import hashlib
 from typing import Any
 
 import pandas as pd
@@ -17,8 +16,6 @@ POSITIVE_KEYWORDS = [
     "回购",
     "增持",
     "战略合作",
-    "并购",
-    "重组",
 ]
 
 NEGATIVE_KEYWORDS = [
@@ -60,11 +57,6 @@ def safe_str(value: Any) -> str:
     if isinstance(value, float) and pd.isna(value):
         return ""
     return str(value).strip()
-
-
-def make_alert_hash(code: str, title: str, ann_date: str) -> str:
-    raw = f"{code}|{title}|{ann_date}"
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 class AnnouncementRuleProcessor:
@@ -112,11 +104,10 @@ class AnnouncementRuleProcessor:
             confidence = 0.55
             risk_flags = ["命中重要公告关键词，但方向不确定，需要人工确认。"]
 
-        if "重大" in title or "中标" in title or "业绩预增" in title or "回购" in title:
-            if direction == "positive":
-                level = "A"
+        if direction == "positive" and any(kw in title for kw in ["重大", "中标", "业绩预增", "回购"]):
+            level = "A"
 
-        if "减持" in title or "立案" in title or "处罚" in title:
+        if any(kw in title for kw in ["减持", "立案", "处罚", "监管函"]):
             level = "RISK"
 
         summary = f"{code} {name} 发布公告：{title}"

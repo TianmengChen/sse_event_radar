@@ -53,4 +53,4 @@ def render_alert_markdown(alert: Alert) -> str:
 
 
 def render_alert_title(alert: Alert) -> str:
-    return f"【{alert.level}级预警】{alert.title}"
+    return f"【SSE Event Radar｜{alert.level}级预警】{alert.title}"
