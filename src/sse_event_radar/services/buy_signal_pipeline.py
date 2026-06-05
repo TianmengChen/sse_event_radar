@@ -129,7 +129,12 @@ class BuySignalPipeline:
 
     @staticmethod
     def _hash_alert(alert: Alert) -> str:
+        from datetime import datetime
+
         stocks = ",".join([stock.code for stock in alert.related_stocks])
-        # 买入信号不要永久去重；按日期/小时去重后面再优化。
-        raw = f"{alert.title}|{stocks}"
+
+        now = datetime.now()
+        dedup_window = f"{now:%Y%m%d_%H}"
+
+        raw = f"{dedup_window}|{alert.event_type}|{alert.level}|{alert.title}|{stocks}"
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()

@@ -1,0 +1,85 @@
+stocks:
+  - code: "512480"
+    name: "半导体ETF国联安"
+    type: "etf"
+    industries:
+      - "半导体"
+      - "芯片"
+      - "集成电路"
+    concepts:
+      - "半导体ETF"
+      - "国产替代"
+      - "AI芯片"
+      - "先进制程"
+      - "半导体设备"
+      - "半导体材料"
+
+  - code: "688981"
+    name: "中芯国际"
+    type: "stock"
+    industries:
+      - "半导体"
+      - "晶圆制造"
+      - "集成电路"
+    concepts:
+      - "国产替代"
+      - "先进制程"
+      - "芯片制造"
+
+  - code: "688012"
+    name: "中微公司"
+    type: "stock"
+    industries:
+      - "半导体设备"
+      - "半导体"
+    concepts:
+      - "刻蚀设备"
+      - "国产替代"
+      - "集成电路设备"
+
+  - code: "688008"
+    name: "澜起科技"
+    type: "stock"
+    industries:
+      - "半导体"
+      - "芯片设计"
+    concepts:
+      - "AI服务器"
+      - "内存接口芯片"
+      - "DDR5"
+
+  - code: "588000"
+    name: "科创50ETF华夏"
+    type: "etf"
+    industries:
+      - "科创板"
+      - "科技成长"
+    concepts:
+      - "科创50"
+      - "半导体"
+      - "创新药"
+      - "新能源"
+
+  - code: "600000"
+    name: "浦发银行"
+    type: "stock"
+    industries:
+      - "银行"
+      - "金融"
+    concepts:
+      - "银行"
+      - "利率"
+      - "地产链"
+      - "金融"
+
+  - code: "600036"
+    name: "招商银行"
+    type: "stock"
+    industries:
+      - "银行"
+      - "金融"
+    concepts:
+      - "银行"
+      - "消费金融"
+      - "财富管理"
+      - "利率"
